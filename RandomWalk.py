@@ -1,3 +1,5 @@
+from __future__ import division
+
 # Anthony Lim
 # alim4@ucsc.edu
 #
@@ -11,47 +13,91 @@ __author__ = 'anthonylim'
 import random
 import math
 
-
 def main():
-    num_times_broke = 0
-    actual_avg_return = 0
-
-
+    global unittest
+    unittest = 1
     # Gets input from user and stores into variables
     avg_return, stddev_return, leverage_ratio, number_of_periods, number_of_trials = getInputs()
 
     # Run the simulation
-    total_balance = 0
-    total_period_return = 0
+    total_balance = 0.0
+    total_period_return = 0.0
+    total_num_lost_money = 0.0
+    total_num_broke = 0.0
+    total_losses = 0.0
+
+    stddev_list = []
+    stddev_losses = []
     for i in range(number_of_trials):
-        bal, preturn = simulate(avg_return, stddev_return, leverage_ratio, number_of_periods)
+        bal, preturn, num_lost_money, num_broke, ppr_losses\
+            = simulate(avg_return, stddev_return, leverage_ratio, number_of_periods)
         total_balance += bal
         total_period_return += preturn
+        total_num_lost_money += num_lost_money
+        total_num_broke += num_broke
+        total_losses += ppr_losses
+        stddev_list.append(preturn)
+        stddev_losses.append(ppr_losses)
 
-    mean_balance = total_balance / number_of_trials
-    mean_period_return = total_period_return / number_of_trials
+    # Standard deviation regular
+    stddev = calculateStandardDev(stddev_list)
+
+    # Standard deviation losses
+    stddev_losses = calculateStandardDev(stddev_losses)
+
+    # Lost money
+    lost_money_percent = (total_num_lost_money / (number_of_periods * number_of_trials)) * 100
+    num_broke_percent = (total_num_broke / (number_of_periods * number_of_trials)) * 100
+
+    mean_balance = float(total_balance / number_of_trials)
+    mean_period_return = (total_period_return / number_of_trials) * 10
+    mean_ppr_losses = (total_losses / number_of_trials)
     print('mean_balance: {0} | mean_return: {1}'.format(mean_balance, mean_period_return))
 
-    print("We ran {0} trials, each at {1}% return ({2}% std dev) for {3} periods."
-          .format(number_of_trials, avg_return, stddev_return, number_of_periods))
+    print("We ran {0} trials, each at {1:.4g}% return ({2:.4g}% std dev) for {3} periods. "
+          "({4} total runs)"
+          .format(number_of_trials, avg_return, stddev_return, number_of_periods, number_of_periods*number_of_trials))
 
+    print("Went broke {0} times ({1}% of the time)".format(total_num_broke, num_broke_percent))
     print("Average per-period return: {0:.4g}%".format(mean_period_return))
-    #print("Standard deviation of return: {0:.2g}%".format())
+    print("Standard deviation of return: {0:.4g}%".format(stddev))
+    print("Lost money {0} times ({1}% of the time)".format(total_num_lost_money, lost_money_percent))
+    print("For losses, average per-period return: {0}%".format(mean_ppr_losses))
+    print("For losses, standard deviation of return: {0}%".format(stddev_losses))
 
-    print("avg_return: {0}\n"
+    print("\navg_return: {0}\n"
           "stddev_return: {1}\n"
           "leverage_ratio: {2}\n"
           "number_of_periods: {3}\n"
           "number_of_trials: {4}\n"
           .format(avg_return, stddev_return, leverage_ratio, number_of_periods, number_of_trials))
 
+def calculateStandardDev(stddev_list):
+    # Standard deviation calculations
+    stddev_list_squared = 0.0
+    for j in stddev_list:
+        stddev_list_squared += math.pow(j, 2)
+
+    # Standard deviation
+    stddev = float(math.sqrt(float(stddev_list_squared) / float(stddev_list.__len__()))) * 10
+
+    return stddev
 
 def getInputs():
-    avg_return = float(raw_input("Input average per-period return, in percentage (0.0-40.0): "))
-    stddev_return = float(raw_input("Input standard deviation (0.0-50.0): "))
-    leverage_ratio = float(raw_input("Input leverage ratio (1.0-10.0): "))
-    number_of_periods = int(raw_input("Input number of periods (10-500): "))
-    number_of_trials = int(raw_input("Input number of trials (100-10000): "))
+    if unittest == 0:
+        avg_return = float(raw_input("Input average per-period return, in percentage (0.0-40.0): "))
+        stddev_return = float(raw_input("Input standard deviation (0.0-50.0): "))
+        leverage_ratio = float(raw_input("Input leverage ratio (1.0-10.0): "))
+        number_of_periods = int(raw_input("Input number of periods (10-500): "))
+        number_of_trials = int(raw_input("Input number of trials (100-10000): "))
+    elif unittest == 1:
+        print("UNIT TEST MODE ACTIVE")
+        avg_return = float(2.0)
+        stddev_return = float(10.0)
+        leverage_ratio = float(1.0)
+        number_of_periods = int(20)
+        number_of_trials = int(5000)
+
 
     # Error checking
     if avg_return > 40:
@@ -85,37 +131,41 @@ def getInputs():
             number_of_periods,
             number_of_trials)
 
-def calculateStandardDev(observed_value):
-    m1 = observed_value
-    s1 = 0.0
-
-
-
-
 def simulate(avg_return, stddev_return, leverage_ratio, number_of_periods):
     orig_balance = 100.0
     curr_balance = orig_balance
     num_periods = number_of_periods
+    num_lost_money = 0
     num_broke = 0
+    losses = 0.0
+
     while num_periods > 0:
         #print('num_periods: {0}'.format(num_periods))
-        curr_balance += random.normalvariate(avg_return, stddev_return) * leverage_ratio
-        if curr_balance < 0:
+        curr_balance += random.normalvariate(avg_return, stddev_return) * (leverage_ratio * orig_balance)
+        if curr_balance < orig_balance:
+            if curr_balance < 0:
+                num_broke += 1
+            else:
+                losses += curr_balance
             curr_balance = 0
-            num_broke += 1
+            num_lost_money += 1
         num_periods -= 1
 
-    ratio = curr_balance / orig_balance
-    per_period_return = (math.pow(float(ratio), 1/float(number_of_periods)) - 1) * 100
+    ratio = float(curr_balance / orig_balance)
+    ratio_losses = float(losses / orig_balance)
+    per_period_return = (math.pow(ratio, 1/number_of_periods) - 1)
+    ppr_losses = (math.pow(ratio_losses, 1/number_of_periods) - 1)
 
-    #print('number_of_periods: {0}'.format(number_of_periods))
-    #print('curr_bal: {0} | orig_bal: {1}'.format(curr_balance, orig_balance))
-    #print('ratio: {0} | ppr: {1}'.format(ratio, per_period_return))
-    #print('num times broke: {0}'.format(num_broke))
+    # print('\nnumber_of_periods: {0}'.format(number_of_periods))
+    # print('curr_bal: {0} | orig_bal: {1}'.format(curr_balance, orig_balance))
+    # print('ratio: {0} | ppr: {1}'.format(ratio, per_period_return))
+    # print('num times broke: {0}\n'.format(num_broke))
 
     #print('balance: {0}'.format(curr_balance))
     return (curr_balance,
-            per_period_return)
-
+            per_period_return,
+            num_lost_money,
+            num_broke,
+            ppr_losses)
 
 main()
