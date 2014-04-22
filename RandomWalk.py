@@ -37,13 +37,14 @@ def main():
         total_num_broke += num_broke
         total_losses += ppr_losses
         stddev_list.append(preturn)
-        stddev_losses.append(ppr_losses)
+        if ppr_losses != 0:
+            stddev_losses.append(ppr_losses)
 
     # Standard deviation regular
     stddev = calculateStandardDev(stddev_list)
 
     # Standard deviation losses
-    stddev_losses = calculateStandardDev(stddev_losses)
+    stddev_loss = calculateStandardDev(stddev_losses)
 
     # Lost money
     lost_money_percent = (total_num_lost_money / (number_of_periods * number_of_trials)) * 100
@@ -58,12 +59,12 @@ def main():
           "({4} total runs)"
           .format(number_of_trials, avg_return, stddev_return, number_of_periods, number_of_periods*number_of_trials))
 
-    print("Went broke {0} times ({1}% of the time)".format(total_num_broke, num_broke_percent))
+    print("Went broke {0} times ({1:.4g}% of the time)".format(total_num_broke, num_broke_percent))
     print("Average per-period return: {0:.4g}%".format(mean_period_return))
     print("Standard deviation of return: {0:.4g}%".format(stddev))
-    print("Lost money {0} times ({1}% of the time)".format(total_num_lost_money, lost_money_percent))
-    print("For losses, average per-period return: {0}%".format(mean_ppr_losses))
-    print("For losses, standard deviation of return: {0}%".format(stddev_losses))
+    print("Lost money {0} times ({1:.4g}% of the time)".format(total_num_lost_money, lost_money_percent))
+    print("For losses, average per-period return: {0:.4g}%".format(mean_ppr_losses))
+    print("For losses, standard deviation of return: {0:.4g}%".format(stddev_loss))
 
     print("\navg_return: {0}\n"
           "stddev_return: {1}\n"
@@ -74,6 +75,9 @@ def main():
 
 def calculateStandardDev(stddev_list):
     # Standard deviation calculations
+    """
+    :rtype : float
+    """
     stddev_list_squared = 0.0
     for j in stddev_list:
         stddev_list_squared += math.pow(j, 2)
